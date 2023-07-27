@@ -209,7 +209,7 @@ final class PDF417HighLevelEncoder {
     // User selected encoding mode
     switch (compaction) {
       case TEXT:
-        encodeText(input, p, len, sb, textSubMode);
+        encodeText(new EncodeTextParams(input, p, len, sb, textSubMode));
         break;
       case BYTE:
         if (autoECI) {
@@ -248,7 +248,7 @@ final class PDF417HighLevelEncoder {
                 encodingMode = TEXT_COMPACTION;
                 textSubMode = SUBMODE_ALPHA; //start with submode alpha after latch
               }
-              textSubMode = encodeText(input, p, t, sb, textSubMode);
+              textSubMode = encodeText(new EncodeTextParams(input, p, t, sb, textSubMode));
               p += t;
             } else {
               int b = determineConsecutiveBinaryCount(input, p, autoECI ? null : encoding);
@@ -287,19 +287,16 @@ final class PDF417HighLevelEncoder {
   /**
    * Encode parts of the message using Text Compaction as described in ISO/IEC 15438:2001(E),
    * chapter 4.4.2.
-   *
-   * @param input          the input
-   * @param startpos       the start position within the message
-   * @param count          the number of characters to encode
-   * @param sb             receives the encoded codewords
-   * @param initialSubmode should normally be SUBMODE_ALPHA
    * @return the text submode in which this method ends
    */
-  private static int encodeText(ECIInput input,
-                                int startpos,
-                                int count,
-                                StringBuilder sb,
-                                int initialSubmode) throws WriterException {
+  private static int encodeText(EncodeTextParams params) throws WriterException {
+
+    ECIInput input = params.getInput();
+    int startpos = params.getStartpos();
+    int count = params.getCount();
+    StringBuilder sb = params.getSb();
+    int initialSubmode = params.getInitialSubmode();
+
     StringBuilder tmp = new StringBuilder(count);
     int submode = initialSubmode;
     int idx = 0;
@@ -710,3 +707,63 @@ final class PDF417HighLevelEncoder {
     }
   }
 }
+
+//new class, so an instance of this class can be called instead of all the parameters in encodeText() method
+class EncodeTextParams {
+  private ECIInput input;
+  private int startpos;
+  private int count;
+  private StringBuilder sb;
+  private int initialSubmode;
+
+  public EncodeTextParams(ECIInput input, int startpos, int count, StringBuilder sb, int initialSubmode) {
+    this.input = input;
+    this.startpos = startpos;
+    this.count = count;
+    this.sb = sb;
+    this.initialSubmode = initialSubmode;
+  }
+
+  //getters
+  public ECIInput getInput() {
+    return input;
+  }
+
+  public void setInput(ECIInput input) {
+    this.input = input;
+  }
+
+  public int getStartpos() {
+    return startpos;
+  }
+
+  public void setStartpos(int startpos) {
+    this.startpos = startpos;
+  }
+
+  public int getCount() {
+    return count;
+  }
+
+  //setters
+  public void setCount(int count) {
+    this.count = count;
+  }
+
+  public StringBuilder getSb() {
+    return sb;
+  }
+
+  public void setSb(StringBuilder sb) {
+    this.sb = sb;
+  }
+
+  public int getInitialSubmode() {
+    return initialSubmode;
+  }
+
+  public void setInitialSubmode(int initialSubmode) {
+    this.initialSubmode = initialSubmode;
+  }
+}
+
