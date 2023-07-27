@@ -97,21 +97,28 @@ public final class StringUtilsTestCase extends Assert {
    * @param args command line arguments
    */
   public static void main(String[] args) {
-    String text = args[0];
-    Charset charset = Charset.forName(args[1]);
-    StringBuilder declaration = new StringBuilder();
-    declaration.append("new byte[] { ");
-    for (byte b : text.getBytes(charset)) {
-      declaration.append("(byte) 0x");
-      int value = b & 0xFF;
-      if (value < 0x10) {
-        declaration.append('0');
+    if (args.length == 0) {
+      System.out.println("Just wanted run the test cases");
+    }else if (args.length == 2){
+      String text = args[0];
+      Charset charset = Charset.forName(args[1]);
+      StringBuilder declaration = new StringBuilder();
+      declaration.append("new byte[] { ");
+      for (byte b : text.getBytes(charset)) {
+        declaration.append("(byte) 0x");
+        int value = b & 0xFF;
+        if (value < 0x10) {
+          declaration.append('0');
+        }
+        declaration.append(Integer.toHexString(value));
+        declaration.append(", ");
       }
-      declaration.append(Integer.toHexString(value));
-      declaration.append(", ");
+      declaration.append('}');
+      System.out.println(declaration);
+    }else{
+      System.out.println("Running test cases ");
     }
-    declaration.append('}');
-    System.out.println(declaration);
   }
+
 
 }

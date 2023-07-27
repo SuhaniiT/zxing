@@ -76,6 +76,14 @@ public final class StringUtils {
     return c.name();
   }
 
+  //making the variables global, so that they can be used in the new methods without adding a lot of extra code
+  static boolean canBeUTF8 = true;
+  static int utf8BytesLeft = 0;
+  static int utf2BytesChars = 0;
+  static int utf3BytesChars = 0;
+  static int utf4BytesChars = 0;
+  static boolean canBeISO88591 = true;
+  static int isoHighOther = 0;
   /**
    * @param bytes bytes encoding a string, whose encoding should be guessed
    * @param hints decode hints if applicable
@@ -91,84 +99,46 @@ public final class StringUtils {
     }
 
     // First try UTF-16, assuming anything with its BOM is UTF-16
-    if (bytes.length > 2 &&
-        ((bytes[0] == (byte) 0xFE && bytes[1] == (byte) 0xFF) ||
-         (bytes[0] == (byte) 0xFF && bytes[1] == (byte) 0xFE))) {
+    //Code reduced to a method
+    if (tryUTF16(bytes)){
       return StandardCharsets.UTF_16;
     }
 
     // For now, merely tries to distinguish ISO-8859-1, UTF-8 and Shift_JIS,
     // which should be by far the most common encodings.
     int length = bytes.length;
-    boolean canBeISO88591 = true;
     boolean canBeShiftJIS = true;
-    boolean canBeUTF8 = true;
-    int utf8BytesLeft = 0;
-    int utf2BytesChars = 0;
-    int utf3BytesChars = 0;
-    int utf4BytesChars = 0;
     int sjisBytesLeft = 0;
     int sjisKatakanaChars = 0;
     int sjisCurKatakanaWordLength = 0;
     int sjisCurDoubleBytesWordLength = 0;
     int sjisMaxKatakanaWordLength = 0;
     int sjisMaxDoubleBytesWordLength = 0;
-    int isoHighOther = 0;
 
-    boolean utf8bom = bytes.length > 3 &&
-        bytes[0] == (byte) 0xEF &&
-        bytes[1] == (byte) 0xBB &&
-        bytes[2] == (byte) 0xBF;
+    //code reduced to a method
+    boolean utf8bom = tryUTF18(bytes);
 
     for (int i = 0;
          i < length && (canBeISO88591 || canBeShiftJIS || canBeUTF8);
          i++) {
 
       int value = bytes[i] & 0xFF;
-
+      int HighOver=0;
       // UTF-8 stuff
       if (canBeUTF8) {
-        if (utf8BytesLeft > 0) {
-          if ((value & 0x80) == 0) {
-            canBeUTF8 = false;
-          } else {
-            utf8BytesLeft--;
-          }
-        } else if ((value & 0x80) != 0) {
-          if ((value & 0x40) == 0) {
-            canBeUTF8 = false;
-          } else {
-            utf8BytesLeft++;
-            if ((value & 0x20) == 0) {
-              utf2BytesChars++;
-            } else {
-              utf8BytesLeft++;
-              if ((value & 0x10) == 0) {
-                utf3BytesChars++;
-              } else {
-                utf8BytesLeft++;
-                if ((value & 0x08) == 0) {
-                  utf4BytesChars++;
-                } else {
-                  canBeUTF8 = false;
-                }
-              }
-            }
-          }
-        }
+        isUTF8(value);
+        //removed the code from this conditional to a new method : isUTF8() to reduce the code and make it more readable
       }
 
       // ISO-8859-1 stuff
       if (canBeISO88591) {
-        if (value > 0x7F && value < 0xA0) {
-          canBeISO88591 = false;
-        } else if (value > 0x9F && (value < 0xC0 || value == 0xD7 || value == 0xF7)) {
-          isoHighOther++;
-        }
+         isISO88591(value);
+        //removed the code from this conditional to a new method :isISO88591() is to reduce the code and make it more readable
       }
 
       // Shift_JIS stuff
       if (canBeShiftJIS) {
+        int  isoHighOther = HighOver;
         if (sjisBytesLeft > 0) {
           if (value < 0x40 || value == 0x7F || value > 0xFC) {
             canBeShiftJIS = false;
@@ -237,6 +207,61 @@ public final class StringUtils {
     }
     // Otherwise, we take a wild guess with platform encoding
     return PLATFORM_DEFAULT_ENCODING;
+  }
+
+  private static boolean tryUTF16(byte[] bytes){
+    if (bytes.length > 2 &&
+      ((bytes[0] == (byte) 0xFE && bytes[1] == (byte) 0xFF) ||
+        (bytes[0] == (byte) 0xFF && bytes[1] == (byte) 0xFE))){
+      return true;
+    }
+    return false;
+  }
+
+  private static boolean tryUTF18(byte[] bytes){
+    return bytes.length > 3 &&
+      bytes[0] == (byte) 0xEF &&
+      bytes[1] == (byte) 0xBB &&
+      bytes[2] == (byte) 0xBF;
+  }
+  //moving the code in the conditional for canBeUTF8 into a method
+  private static void isUTF8(int value){
+    if (utf8BytesLeft > 0) {
+      if ((value & 0x80) == 0) {
+        canBeUTF8 = false;
+      } else {
+        utf8BytesLeft--;
+      }
+    } else if ((value & 0x80) != 0) {
+      if ((value & 0x40) == 0) {
+        canBeUTF8 = false;
+      } else {
+        utf8BytesLeft++;
+        if ((value & 0x20) == 0) {
+          utf2BytesChars++;
+        } else {
+          utf8BytesLeft++;
+          if ((value & 0x10) == 0) {
+            utf3BytesChars++;
+          } else {
+            utf8BytesLeft++;
+            if ((value & 0x08) == 0) {
+              utf4BytesChars++;
+            } else {
+              canBeUTF8 = false;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private static void isISO88591(int value){
+    if (value > 0x7F && value < 0xA0) {
+      canBeISO88591 = false;
+    } else if (value > 0x9F && (value < 0xC0 || value == 0xD7 || value == 0xF7)) {
+      isoHighOther++;
+    }
   }
 
 }
