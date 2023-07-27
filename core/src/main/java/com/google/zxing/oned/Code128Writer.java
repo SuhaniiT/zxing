@@ -382,9 +382,19 @@ public final class Code128Writer extends OneDimensionalCodeWriter {
     private int[][] memoizedCost;
     private Latch[][] minPath;
 
+    // Initialize memoizedCost and minPath
+    private void initialMemoizedCostAndMinPath(int length) {
+      memoizedCost = new int[4][length];
+      minPath = new Latch[4][length];
+    }
+
+    // Null memoizedCost and minPath
+    private void clearMemoizedCostAndMinPath() {
+      memoizedCost = null;
+      minPath = null;
+    }
     private boolean[] encode(String contents) {
-      memoizedCost = new int[4][contents.length()];
-      minPath = new Latch[4][contents.length()];
+      initialMemoizedCostAndMinPath(contents.length());
 
       encode(contents, Charset.NONE, 0);
 
@@ -393,8 +403,10 @@ public final class Code128Writer extends OneDimensionalCodeWriter {
       int[] checkWeight = new int[] {1};
       int length = contents.length();
       Charset charset = Charset.NONE;
+
       for (int i = 0; i < length; i++) {
         Latch latch = minPath[charset.ordinal()][i];
+
         switch (latch) {
           case A:
             charset = Charset.A;
@@ -423,39 +435,36 @@ public final class Code128Writer extends OneDimensionalCodeWriter {
             }
           }
         } else { // charset A or B
-          int patternIndex;
-          switch (contents.charAt(i)) {
-            case ESCAPE_FNC_1:
-              patternIndex = CODE_FNC_1;
-              break;
-            case ESCAPE_FNC_2:
-              patternIndex = CODE_FNC_2;
-              break;
-            case ESCAPE_FNC_3:
-              patternIndex = CODE_FNC_3;
-              break;
-            case ESCAPE_FNC_4:
-              if (charset == Charset.A && latch != Latch.SHIFT ||
-                  charset == Charset.B && latch == Latch.SHIFT) {
-                patternIndex = CODE_FNC_4_A;
-              } else {
-                patternIndex = CODE_FNC_4_B;
-              }
-              break;
-            default:
-              patternIndex = contents.charAt(i) - ' ';
-          }
-          if ((charset == Charset.A && latch != Latch.SHIFT ||
-               charset == Charset.B && latch == Latch.SHIFT) &&
-               patternIndex < 0) {
-            patternIndex += '`';
-          }
+          int patternIndex = getPatternIndex(charset, contents.charAt(i), latch);
+          //remved all the Pattern index code, refactored into another method: getPatternIndex
           addPattern(patterns, patternIndex, checkSum, checkWeight, i);
         }
       }
-      memoizedCost = null;
-      minPath = null;
+
+      clearMemoizedCostAndMinPath();
       return produceResult(patterns, checkSum[0]);
+    }
+
+    // method to get the pattern index, functionality removed from encode method to make it more readable and less complex
+    private int getPatternIndex(Charset charset, char ch, Latch latch) {
+      switch (ch) {
+        case ESCAPE_FNC_1:
+          return CODE_FNC_1;
+        case ESCAPE_FNC_2:
+          return CODE_FNC_2;
+        case ESCAPE_FNC_3:
+          return CODE_FNC_3;
+        case ESCAPE_FNC_4:
+          return (charset == Charset.A && latch != Latch.SHIFT) || (charset == Charset.B && latch == Latch.SHIFT)
+            ? CODE_FNC_4_A
+            : CODE_FNC_4_B;
+        default:
+          int patternIndex = ch - ' ';
+          if ((charset == Charset.A && latch != Latch.SHIFT || charset == Charset.B && latch == Latch.SHIFT) && patternIndex < 0) {
+            patternIndex += '`';
+          }
+          return patternIndex;
+      }
     }
 
     private static void addPattern(Collection<int[]> patterns,
