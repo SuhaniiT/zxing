@@ -68,7 +68,7 @@ public final class BitArray implements Cloneable {
    * @return true iff bit i is set
    */
   public boolean get(int i) {
-    return (bits[i / 32] & (1 << (i & 0x1F))) != 0;
+    return BitManipulation.get(bits,i);
   }
 
   /**
@@ -77,7 +77,8 @@ public final class BitArray implements Cloneable {
    * @param i bit to set
    */
   public void set(int i) {
-    bits[i / 32] |= 1 << (i & 0x1F);
+
+    BitManipulation.set(bits, i);
   }
 
   /**
@@ -86,7 +87,7 @@ public final class BitArray implements Cloneable {
    * @param i bit to set
    */
   public void flip(int i) {
-    bits[i / 32] ^= 1 << (i & 0x1F);
+    BitManipulation.flip(bits, i);
   }
 
   /**
@@ -356,4 +357,19 @@ public final class BitArray implements Cloneable {
     return new BitArray(bits.clone(), size);
   }
 
+}
+
+//added a new class for bit manipulation login
+class BitManipulation {
+  static boolean get(int[] bits, int i) {
+    return (bits[i / 32] & (1 << (i & 0x1F))) != 0;
+  }
+
+  static void set(int[] bits, int i) {
+    bits[i / 32] |= 1 << (i & 0x1F);
+  }
+
+  static void flip(int[] bits, int i) {
+    bits[i / 32] ^= 1 << (i & 0x1F);
+  }
 }
